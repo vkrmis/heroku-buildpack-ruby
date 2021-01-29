@@ -90,17 +90,25 @@ WARNING
     end
   end
 
+  def fake_building_in_slash_app_from(tmp_build_path)
+    Pathname("/app").join("bin").rmdir
+
+    pathname = Pathname(tmp_build_path)
+    files = pathname.glob("{*,.*}") - [pathname.join(".."), pathname.join(".")]
+    FileUtils.cp_r(files, "/app")
+
+    @build_path = "/app"
+
+    yield
+    @build_path = tmp_build_path
+
+    pathname = Pathname("/app")
+    files = pathname.glob("{*,.*}") - [pathname.join(".."), pathname.join(".")]
+    FileUtils.cp_r(files, tmp_build_path)
+  end
+
   def compile
-    instrument 'ruby.compile' do
-      # /app cannot be deleted, we want to link every file and dir in the app to that
-      # location so anything that expects consistent paths gets them at build and runtime.
-      symlink_build_path = Pathname(@symlink_build_path)
-
-      Pathname("/app").join("bin").rmdir
-
-      pathname = symlink_build_path
-      files = pathname.glob("{*,.*}") - [pathname.join(".."), pathname.join(".")]
-      FileUtils.cp_r(files, "/app")
+    fake_building_in_slash_app_from(build_path) do
 
       # check for new app at the beginning of the compile
       new_app?
@@ -133,9 +141,6 @@ WARNING
       cleanup
       super
 
-      pathname = Pathname("/app")
-      files = pathname.glob("{*,.*}") - [pathname.join(".."), pathname.join(".")]
-      FileUtils.cp_r(files, symlink_build_path)
     end
   rescue => e
     warn_outdated_ruby
