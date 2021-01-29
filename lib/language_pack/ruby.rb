@@ -92,6 +92,16 @@ WARNING
 
   def compile
     instrument 'ruby.compile' do
+      # /app cannot be deleted, we want to link every file and dir in the app to that
+      # location so anything that expects consistent paths gets them at build and runtime.
+      symlink_build_path = Pathname(@symlink_build_path)
+
+      Pathname("/app").join("bin").rmdir
+
+      pathname = symlink_build_path
+      files = pathname.glob("{*,.*}") - [pathname.join(".."), pathname.join(".")]
+      FileUtils.cp_r(files, "/app")
+
       # check for new app at the beginning of the compile
       new_app?
       Dir.chdir(build_path)
@@ -122,6 +132,10 @@ WARNING
       setup_export
       cleanup
       super
+
+      pathname = Pathname("/app")
+      files = pathname.glob("{*,.*}") - [pathname.join(".."), pathname.join(".")]
+      FileUtils.cp_r(files, symlink_build_path)
     end
   rescue => e
     warn_outdated_ruby
