@@ -28,11 +28,13 @@ class LanguagePack::Base
   # @param [String] the path of the build dir
   # @param [String] the path of the cache dir this is nil during detect and release
   def initialize(build_path, cache_path = nil, layer_dir=nil)
-    Thread.new do
-      loop do
-        sleep 10 # seconds
-        puts "=" * 80;
-        Thread.list.each.with_index { |t, i| puts "== Thread #{i}"; puts t.backtrace }
+    if env("HEROKU_BUILDPACK_THREAD_TIMER")
+      Thread.new do
+        loop do
+          sleep 10 # seconds
+          puts "=" * 80;
+          Thread.list.each.with_index { |t, i| puts "== Thread #{i}"; puts t.backtrace }
+        end
       end
     end
 
